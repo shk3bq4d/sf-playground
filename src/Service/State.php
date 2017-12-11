@@ -3,9 +3,10 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Service;
@@ -21,6 +22,11 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class State
 {
+    /**
+     * @var string
+     */
+    public const SESSION_SETTINGS_NAME = 'settings';
+
     /**
      * @var string
      */
@@ -52,11 +58,6 @@ class State
     private $locale;
 
     /**
-     * @var string[]
-     */
-    private $availableLocales;
-
-    /**
      * @var string
      */
     private $queryString;
@@ -68,29 +69,25 @@ class State
 
     /**
      * @param Request|null $request
-     * @param string       $spaceId
-     * @param string       $deliveryToken
-     * @param string       $previewToken
+     * @param string[]     $credentials
      * @param string       $locale
-     * @param string[]     $availableLocales
      */
-    public function __construct(?Request $request, string $spaceId, string $deliveryToken, string $previewToken, string $locale, array $availableLocales)
+    public function __construct(?Request $request, array $credentials, string $locale)
     {
         $settings = [
-            'spaceId' => $spaceId,
-            'deliveryToken' => $deliveryToken,
-            'previewToken' => $previewToken,
+            'spaceId' => $credentials['space_id'],
+            'deliveryToken' => $credentials['delivery_token'],
+            'previewToken' => $credentials['preview_token'],
             'locale' => $locale,
-            'availableLocales' => $availableLocales,
-            'editorialFeatures' => false,
-            'api' => 'cda',
+            'editorialFeatures' => \false,
+            'api' => Contentful::API_DELIVERY,
             'queryString' => '',
-            'cookieCredentials' => false,
+            'cookieCredentials' => \false,
         ];
 
         // Request can be null when running the CLI.
         if ($request) {
-            $settings = $this->extractValues($settings, $request);
+            $settings = \array_merge($settings, $this->extractValues($request));
         }
 
         foreach ($settings as $setting => $value) {
@@ -99,64 +96,65 @@ class State
     }
 
     /**
-     * @param array   $settings
      * @param Request $request
      *
      * @return array
      */
-    private function extractValues(array $settings, Request $request): array
+    private function extractValues(Request $request): array
+    {
+        $settings = $this->extractCookieSettings($request);
+
+        if ($request->query->has('api')) {
+            $settings['api'] = Contentful::API_PREVIEW === $request->query->get('api')
+                ? Contentful::API_PREVIEW
+                : Contentful::API_DELIVERY;
+        }
+        $settings['locale'] = $request->query->get('locale');
+        $settings['queryString'] = $this->extractQueryString($settings['api'] ?? \null, $settings['locale']);
+
+        return \array_filter($settings);
+    }
+
+    /**
+     * @param Request $request
+     *
+     * @return array
+     */
+    private function extractCookieSettings(Request $request): array
     {
         $cookieSettings = (array) \json_decode(
             \stripslashes($request->cookies->get(Contentful::COOKIE_SETTINGS_NAME, '')),
-            true
+            \true
         );
 
-        if ($this->hasCredentials($cookieSettings)) {
-            $settings['cookieCredentials'] = true;
+        $settings = [];
+
+        if ($cookieSettings) {
+            $settings['cookieCredentials'] = \true;
             $settings['spaceId'] = $cookieSettings['spaceId'];
             $settings['deliveryToken'] = $cookieSettings['deliveryToken'];
             $settings['previewToken'] = $cookieSettings['previewToken'];
             $settings['editorialFeatures'] = $cookieSettings['editorialFeatures'];
         }
 
-        // The "enable_editorial_features" parameter
-        // overrides the current settings.
-        if ($request->query->has('enable_editorial_features')) {
-            $settings['editorialFeatures'] = true;
-        }
-
-        $settings['api'] = $request->query->get('api', $settings['api']);
-        $settings['locale'] = $request->query->get('locale', $settings['locale']);
-
-        // http_build_query will automatically skip null values.
-        $queryString = \http_build_query([
-            'api' => $request->query->get('api'),
-            'locale' => $request->query->get('locale'),
-        ]);
-        // We handle "enable_editorial_features" separately,
-        // as it is a query parameter which has no value,
-        // and http_build_query doesn't support this.
-        if ($request->query->has('enable_editorial_features')) {
-            $queryString .= ($queryString ? '&' : '').'enable_editorial_features';
-        }
-        if ($queryString) {
-            $settings['queryString'] = '?'.$queryString;
-        }
-
         return $settings;
     }
 
     /**
-     * @param string[] $settings
+     * @param string|null $api
+     * @param string|null $locale
      *
-     * @return bool
+     * @return string
      */
-    private function hasCredentials(array $settings): bool
+    private function extractQueryString(?string $api, ?string $locale): string
     {
-        return isset($settings['spaceId'])
-            && isset($settings['deliveryToken'])
-            && isset($settings['previewToken'])
-            && isset($settings['editorialFeatures']);
+        // http_build_query will automatically skip null values.
+        $queryString = \http_build_query([
+            'api' => $api,
+            'locale' => $locale,
+        ]);
+
+        return $queryString ? '?'.$queryString : '';
     }
 
     /**
@@ -229,7 +227,7 @@ class State
      */
     public function isDeliveryApi(): bool
     {
-        return $this->api == Contentful::API_DELIVERY;
+        return Contentful::API_DELIVERY === $this->api;
     }
 
     /**
@@ -238,14 +236,6 @@ class State
     public function getLocale(): string
     {
         return $this->locale;
-    }
-
-    /**
-     * @return string[]
-     */
-    public function getAvailableLocales(): array
-    {
-        return $this->availableLocales;
     }
 
     /**
@@ -262,5 +252,28 @@ class State
     public function getQueryString(): string
     {
         return $this->queryString;
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasEditorialFeaturesLink(): bool
+    {
+        return $this->editorialFeatures && Contentful::API_PREVIEW === $this->api;
+    }
+
+    /**
+     * @return string
+     */
+    public function getShareableLinkQuery(): string
+    {
+        return '?'.\http_build_query([
+            'space_id' => $this->spaceId,
+            'delivery_token' => $this->deliveryToken,
+            'preview_token' => $this->previewToken,
+            'editorial_features' => $this->editorialFeatures ? 'enabled' : 'disabled',
+            'api' => $this->api,
+            'locale' => $this->locale,
+        ]);
     }
 }

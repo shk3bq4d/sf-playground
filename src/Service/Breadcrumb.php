@@ -3,9 +3,10 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Service;
@@ -60,9 +61,9 @@ class Breadcrumb
      * @param array  $parameters
      * @param bool   $translate
      *
-     * @return Breadcrumb
+     * @return self
      */
-    public function add(string $label, string $route, array $parameters = [], bool $translate = true): Breadcrumb
+    public function add(string $label, string $route, array $parameters = [], bool $translate = \true): self
     {
         $label = $translate ? $this->translator->trans($label) : $label;
         $url = $this->urlGenerator->generate($route, $parameters);

@@ -3,9 +3,10 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Tests\Controller;
@@ -16,21 +17,23 @@ class LandingPageControllerTest extends AppWebTestCase
     {
         $this->visit('GET', '/');
 
-        $this->assertPageContains('.module-higlighted-course__title', 'Hello world');
-        $this->assertPageContains('.module-higlighted-course__link-wrapper', 'view course');
+        $this->assertPageContains('.module-highlighted-course__title', 'Hello Contentful');
+        $this->assertPageContains('.module-highlighted-course__link-wrapper', 'view course');
     }
 
     public function testHomepageGerman()
     {
         $this->visit('GET', '/?locale=de-DE');
 
-        $this->assertPageContains('.module-higlighted-course__title', 'Hallo Welt');
-        $this->assertPageContains('.module-higlighted-course__link-wrapper', 'Kurs ansehen');
+        $this->assertPageContains('.module-highlighted-course__title', 'Hallo Contentful');
+        $this->assertPageContains('.module-highlighted-course__link-wrapper', 'Kurs ansehen');
     }
 
     public function test404Page()
     {
         $this->visit('GET', '/wrong-page', 404);
+
+        $this->assertPageContains('body', 'The page you are trying to open does not exist.');
     }
 
     public function testPageLayout()

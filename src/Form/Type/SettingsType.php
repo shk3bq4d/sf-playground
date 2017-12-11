@@ -3,12 +3,13 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
-namespace App\Form;
+namespace App\Form\Type;
 
 use App\Validator\Constraints\ContentfulCredentials;
 use Symfony\Component\Form\AbstractType;
@@ -25,18 +26,18 @@ class SettingsType extends AbstractType
         $builder
             ->add('spaceId', TextType::class, [
                 'constraints' => new NotBlank(['message' => 'fieldIsRequiredLabel']),
-                'required' => true,
+                'required' => \true,
             ])
             ->add('deliveryToken', TextType::class, [
                 'constraints' => new NotBlank(['message' => 'fieldIsRequiredLabel']),
-                'required' => true,
+                'required' => \true,
             ])
             ->add('previewToken', TextType::class, [
                 'constraints' => new NotBlank(['message' => 'fieldIsRequiredLabel']),
-                'required' => true,
+                'required' => \true,
             ])
             ->add('editorialFeatures', CheckboxType::class, [
-                'required' => false,
+                'required' => \false,
             ])
         ;
     }

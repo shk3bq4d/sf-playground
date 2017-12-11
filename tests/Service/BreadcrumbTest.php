@@ -1,20 +1,21 @@
 <?php
 
 /**
- * This file is part of the contentful/the-example-app.php package.
+ * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2015-2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Tests\Service;
 
-use App\Service\State;
 use App\Service\Breadcrumb;
+use App\Service\State;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Translation\TranslatorInterface;
 
 class BreadcrumbTest extends TestCase
@@ -24,13 +25,18 @@ class BreadcrumbTest extends TestCase
         $breadcrumb = new Breadcrumb(
             new BreadcrumbTestTranslator(),
             new BreadcrumbTestUrlGenerator(),
-            new State(null, 'spaceId', 'deliveryToken', 'previewToken', 'locale', ['en-US', 'de-DE'])
+            new State(\null, [
+                'space_id' => 'spaceId',
+                'delivery_token' => 'deliveryToken',
+                'preview_token' => 'previewToken',
+            ], 'locale')
         );
 
         $breadcrumb->add('item1', 'route1', ['param1' => 'value1'])
-            ->add('item2', 'route2', [], false);
+            ->add('item2', 'route2', [], \false)
+        ;
 
-        $this->assertEquals([
+        $this->assertSame([
             ['label' => 'item1-[]', 'url' => '/route1-{"param1":"value1"}'],
             ['label' => 'item2', 'url' => '/route2-[]'],
         ], $breadcrumb->getItems());
@@ -42,17 +48,17 @@ class BreadcrumbTestTranslator implements TranslatorInterface
     /**
      * {@inheritdoc}
      */
-    public function trans($id, array $parameters = array(), $domain = null, $locale = null)
+    public function trans($id, array $parameters = [], $domain = \null, $locale = \null)
     {
-        return $id.'-'.json_encode($parameters);
+        return $id.'-'.\json_encode($parameters);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function transChoice($id, $number, array $parameters = array(), $domain = null, $locale = null)
+    public function transChoice($id, $number, array $parameters = [], $domain = \null, $locale = \null)
     {
-        return $id.'-'.$number.'-'.json_encode($parameters);
+        return $id.'-'.$number.'-'.\json_encode($parameters);
     }
 
     /**
@@ -75,9 +81,9 @@ class BreadcrumbTestUrlGenerator implements UrlGeneratorInterface
     /**
      * {@inheritdoc}
      */
-    public function generate($name, $parameters = array(), $referenceType = self::ABSOLUTE_PATH)
+    public function generate($name, $parameters = [], $referenceType = self::ABSOLUTE_PATH)
     {
-        return '/'.$name.'-'.json_encode($parameters);
+        return '/'.$name.'-'.\json_encode($parameters);
     }
 
     /**

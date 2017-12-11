@@ -3,20 +3,20 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Kernel;
+use Contentful\Core\Api\Exception;
 use Contentful\Delivery\Client;
-use Contentful\Delivery\DynamicEntry;
 use Contentful\Delivery\Query;
-use Contentful\Delivery\Space;
-use Contentful\Exception\ApiException;
-use Contentful\Exception\NotFoundException;
+use Contentful\Delivery\Resource\Entry;
+use Contentful\Delivery\Resource\Environment;
+use Contentful\Delivery\Resource\Space;
 
 /**
  * Contentful class.
@@ -52,71 +52,48 @@ class Contentful
     private $state;
 
     /**
-     * @param State  $state
-     * @param string $cacheDir
+     * @var EntryStateChecker
      */
-    public function __construct(State $state, string $cacheDir)
+    private $entryStateChecker;
+
+    /**
+     * @var ClientFactory
+     */
+    private $clientFactory;
+
+    /**
+     * @param State             $state
+     * @param ClientFactory     $clientFactory
+     * @param EntryStateChecker $entryStateChecker
+     */
+    public function __construct(State $state, ClientFactory $clientFactory, EntryStateChecker $entryStateChecker)
     {
         $this->state = $state;
-        $options = ['cacheDir' => $cacheDir.'/contentful'];
-
-        $this->client = $this->state->isDeliveryApi()
-            ? new Client($this->state->getDeliveryToken(), $this->state->getSpaceId(), false, $this->state->getLocale(), $options)
-            : new Client($this->state->getPreviewToken(), $this->state->getSpaceId(), true, $this->state->getLocale(), $options);
-
-        $this->client->setApplication(Kernel::APP_NAME, Kernel::APP_VERSION);
+        $this->entryStateChecker = $entryStateChecker;
+        $this->clientFactory = $clientFactory;
+        $this->client = $clientFactory->createClient(
+            $this->state->isDeliveryApi() ? self::API_DELIVERY : self::API_PREVIEW
+        );
     }
 
     /**
      * Validates the given credentials by trying to make an API call.
      *
      * @param string $spaceId
-     * @param string $token
-     * @param bool   $deliveryApi
+     * @param string $accessToken
+     * @param string $api
      *
-     * @throws ApiException if the credentials are not valid and an error response is returned from Contentful
+     * @throws Exception if the credentials are not valid and an error response is returned from Contentful
      */
-    public function validateCredentials(string $spaceId, string $token, bool $deliveryApi = true): void
+    public function validateCredentials(string $spaceId, string $accessToken, string $api = self::API_DELIVERY): void
     {
         // We make an "empty" API call,
         // the result of which will depend on the validity of the credentials.
         // If any error should arise, the call will throw an exception.
-        $client = new Client($token, $spaceId, !$deliveryApi);
-        $client->setApplication('the-example-app.php', Kernel::APP_VERSION);
-        $client->getSpace();
-    }
-
-    /**
-     * Attaches to an entry metadata about its state.
-     * The entry will have two extra fields defined:
-     * - draft: whether the entry has not been published yet
-     * - pendingChanges: whether the entry has already been published,
-     *     but some changes have been made in the meanwhile.
-     *
-     * @param DynamicEntry $entry
-     *
-     * @return DynamicEntry
-     */
-    private function attachEntryState(DynamicEntry $entry): DynamicEntry
-    {
-        $entry->draft = false;
-        $entry->pendingChanges = false;
-
-        if ($this->state->hasEditorialFeaturesEnabled() && $this->state->getApi() == self::API_PREVIEW) {
-            $deliveryClient = new Client($this->state->getDeliveryToken(), $this->state->getSpaceId(), false, $this->state->getLocale());
-
-            try {
-                $publishedEntry = $deliveryClient->getEntry($entry->getId());
-
-                if ($entry->getUpdatedAt() != $publishedEntry->getUpdatedAt()) {
-                    $entry->pendingChanges = true;
-                }
-            } catch (NotFoundException $exception) {
-                $entry->draft = true;
-            }
-        }
-
-        return $entry;
+        $query = (new Query())
+            ->setLimit(1)
+        ;
+        $this->clientFactory->createClient($api, $spaceId, $accessToken, \false)->getContentTypes($query);
     }
 
     /**
@@ -130,16 +107,27 @@ class Contentful
     }
 
     /**
+     * Finds the environment object currently in use.
+     *
+     * @return Environment
+     */
+    public function findEnvironment(): Environment
+    {
+        return $this->client->getEnvironment();
+    }
+
+    /**
      * Finds the available courses, sorted alphabetically.
      *
-     * @return DynamicEntry[]
+     * @return Entry[]
      */
     public function findCategories(): array
     {
         $query = (new Query())
             ->setContentType('category')
             ->orderBy('fields.title')
-            ->setLocale($this->state->getLocale());
+            ->setLocale($this->state->getLocale())
+        ;
 
         return $this->client->getEntries($query)->getItems();
     }
@@ -147,51 +135,106 @@ class Contentful
     /**
      * Finds the available courses, sorted by creation date.
      *
-     * @param DynamicEntry|null $category
+     * @param Entry|null $category
      *
-     * @return DynamicEntry[]
+     * @return Entry[]
      */
-    public function findCourses(?DynamicEntry $category): array
+    public function findCourses(?Entry $category): array
     {
         $query = (new Query())
             ->setContentType('course')
             ->setLocale($this->state->getLocale())
             ->orderBy('-sys.createdAt')
-            ->setInclude(6);
+            ->setInclude(2)
+        ;
 
         if ($category) {
             $query->where('fields.categories.sys.id', $category->getId());
         }
 
-        $courses = $this->client->getEntries($query);
+        $courses = $this->client->getEntries($query)->getItems();
 
-        return array_map([$this, 'attachEntryState'], $courses->getItems());
+        if ($courses && $this->state->hasEditorialFeaturesLink()) {
+            $this->entryStateChecker->computeState(...$courses);
+        }
+
+        return $courses;
     }
 
     /**
      * Finds a course using its slug.
      * We use the collection endpoint, so we can prefetch linked entries
      * by using the include parameter.
+     * Depending on the page, we can choose whether we can go as deep as
+     * the lesson modules when working out the entry state.
      *
-     * @param string $slug
+     * @param string $courseSlug
      *
-     * @return DynamicEntry|null
+     * @return Entry|null
      */
-    public function findCourse(string $slug): ?DynamicEntry
+    public function findCourse(string $courseSlug): ?Entry
     {
-        $query = (new Query())
-            ->where('fields.slug', $slug)
-            ->setContentType('course')
-            ->setLocale($this->state->getLocale())
-            ->setInclude(6);
+        $course = $this->findEntry('course', $courseSlug);
 
-        $courses = $this->client->getEntries($query);
-
-        if (!count($courses)) {
-            return null;
+        if ($course && $this->state->hasEditorialFeaturesLink()) {
+            $this->entryStateChecker->computeState($course);
         }
 
-        return $this->attachEntryState($courses[0]);
+        return $course;
+    }
+
+    /**
+     * Even if the main goal of the query is to get a lesson, we look for the course instead.
+     * This is done to take advantage of the include operator, which allows us to get
+     * a whole tree of entries, which is useful because we also need to get
+     * some data from the next lesson, too.
+     * In order to simplify access, we attach the lesson and nextLesson objects
+     * to the main course one.
+     *
+     * @param string $courseSlug
+     * @param string $lessonSlug
+     *
+     * @return Entry|null
+     */
+    public function findCourseByLesson(string $courseSlug, string $lessonSlug): ?Entry
+    {
+        $course = $this->findEntry('course', $courseSlug, 3);
+        if (!$course) {
+            return \null;
+        }
+
+        $lessons = $course->get('lessons');
+        $lessonIndex = $this->findLessonIndex($lessons, $lessonSlug);
+        if (\null === $lessonIndex) {
+            return \null;
+        }
+
+        $course->lesson = $lessons[$lessonIndex];
+        $course->nextLesson = $lessons[$lessonIndex + 1] ?? \null;
+
+        if ($this->state->hasEditorialFeaturesLink()) {
+            $course->lesson->children = $course->lesson->get('modules');
+            $this->entryStateChecker->computeState($course->lesson);
+        }
+
+        return $course;
+    }
+
+    /**
+     * @param Entry[] $lessons
+     * @param string  $lessonSlug
+     *
+     * @return int|null
+     */
+    private function findLessonIndex(array $lessons, string $lessonSlug): ?int
+    {
+        foreach ($lessons as $index => $lesson) {
+            if ($lesson->get('slug') === $lessonSlug) {
+                return $index;
+            }
+        }
+
+        return \null;
     }
 
     /**
@@ -201,22 +244,37 @@ class Contentful
      *
      * @param string $slug
      *
-     * @return DynamicEntry|null
+     * @return Entry|null
      */
-    public function findLandingPage(string $slug): ?DynamicEntry
+    public function findLandingPage(string $slug): ?Entry
     {
-        $query = (new Query())
-            ->where('fields.slug', $slug)
-            ->setContentType('layout')
-            ->setLocale($this->state->getLocale())
-            ->setInclude(6);
+        $landingPage = $this->findEntry('layout', $slug, 3);
 
-        $landingPages = $this->client->getEntries($query);
-
-        if (!count($landingPages)) {
-            return null;
+        if ($landingPage && $this->state->hasEditorialFeaturesLink()) {
+            $landingPage->children = $landingPage->get('contentModules');
+            $this->entryStateChecker->computeState($landingPage);
         }
 
-        return $this->attachEntryState($landingPages[0]);
+        return $landingPage;
+    }
+
+    /**
+     * @param string $contentType
+     * @param string $slug
+     * @param int    $include
+     *
+     * @return Entry|null
+     */
+    private function findEntry(string $contentType, string $slug, int $include = 1): ?Entry
+    {
+        $query = (new Query())
+            ->setLocale($this->state->getLocale())
+            ->setContentType($contentType)
+            ->where('fields.slug', $slug)
+            ->setInclude($include)
+            ->setLimit(1)
+        ;
+
+        return $this->client->getEntries($query)->getItems()[0] ?? \null;
     }
 }

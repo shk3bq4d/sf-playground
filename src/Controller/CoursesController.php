@@ -3,50 +3,46 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Service\Breadcrumb;
-use App\Service\Contentful;
-use App\Service\ResponseFactory;
-use Contentful\Delivery\DynamicEntry;
+use Contentful\Delivery\Resource\Entry;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * CoursesController.
  */
-class CoursesController
+class CoursesController extends AppController
 {
     /**
-     * @param ResponseFactory $responseFactory
-     * @param Breadcrumb      $breadcrumb
-     * @param Contentful      $contentful
-     * @param string|null     $categorySlug
+     * @param string|null $categorySlug
      *
      * @return Response
      */
-    public function __invoke(ResponseFactory $responseFactory, Breadcrumb $breadcrumb, Contentful $contentful, ?string $categorySlug): Response
+    public function __invoke(?string $categorySlug): Response
     {
-        $categories = $contentful->findCategories();
+        $categories = $this->contentful->findCategories();
         $category = $this->findCategory($categories, $categorySlug);
-        if ($categorySlug and !$category) {
-            throw new NotFoundHttpException();
+        if ($categorySlug && !$category) {
+            throw new NotFoundHttpException($this->translator->trans('errorMessage404Category'));
         }
-        $courses = $contentful->findCourses($category);
+        $courses = $this->contentful->findCourses($category);
 
-        $breadcrumb->add('homeLabel', 'landing_page')
-            ->add('coursesLabel', 'courses');
+        $this->breadcrumb->add('homeLabel', 'landing_page')
+            ->add('coursesLabel', 'courses')
+        ;
 
         if ($category) {
-            $breadcrumb->add($category->getTitle(), 'category', ['categorySlug' => $categorySlug], false);
+            $this->breadcrumb->add($category->get('title'), 'category', ['categorySlug' => $categorySlug], \false);
         }
 
-        return $responseFactory->createResponse('courses.html.twig', [
+        return $this->responseFactory->createResponse('courses.html.twig', [
             'courses' => $courses,
             'categories' => $categories,
             'currentCategory' => $category,
@@ -54,19 +50,19 @@ class CoursesController
     }
 
     /**
-     * @param DynamicEntry[] $categories
-     * @param string|null    $categorySlug
+     * @param Entry[]     $categories
+     * @param string|null $categorySlug
      *
-     * @return DynamicEntry|null
+     * @return Entry|null
      */
-    private function findCategory(array $categories, ?string $categorySlug): ?DynamicEntry
+    private function findCategory(array $categories, ?string $categorySlug): ?Entry
     {
         foreach ($categories as $category) {
-            if ($category->getSlug() == $categorySlug) {
+            if ($category->get('slug') === $categorySlug) {
                 return $category;
             }
         }
 
-        return null;
+        return \null;
     }
 }

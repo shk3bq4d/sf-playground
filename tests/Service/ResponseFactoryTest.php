@@ -1,19 +1,20 @@
 <?php
 
 /**
- * This file is part of the contentful/the-example-app.php package.
+ * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2015-2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Tests\Service;
 
 use App\Service\ResponseFactory;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\RequestContext;
 use Twig\Environment;
 
 class ResponseFactoryTest extends TestCase
@@ -32,7 +33,8 @@ class ResponseFactoryTest extends TestCase
     {
         $this->twig = $this->createMock(Environment::class);
         $this->twig->method('render')
-            ->willReturn($this->html);
+            ->willReturn($this->html)
+        ;
     }
 
     public function testStandardResponse()
@@ -42,14 +44,14 @@ class ResponseFactoryTest extends TestCase
 
         $response = $responseFactory->createResponse('fakePath.html.twig');
 
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals($this->html, $response->getContent());
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame($this->html, $response->getContent());
 
         $cookies = $response->headers->getCookies();
         $this->assertCount(1, $cookies);
         $cookie = $cookies[0];
-        $this->assertEquals('TestCookie', $cookie->getName());
-        $this->assertEquals('"1337"', $cookie->getValue());
+        $this->assertSame('TestCookie', $cookie->getName());
+        $this->assertSame('"1337"', $cookie->getValue());
         $this->assertLessThanOrEqual(\time() + 3600, $cookie->getExpiresTime());
     }
 
@@ -58,8 +60,8 @@ class ResponseFactoryTest extends TestCase
         $responseFactory = new ResponseFactory($this->twig, new ResponseFactoryTestUrlGenerator(), 3600);
         $response = $responseFactory->createRedirectResponse('https://www.example.com');
 
-        $this->assertEquals(302, $response->getStatusCode());
-        $this->assertEquals('https://www.example.com', $response->getTargetUrl());
+        $this->assertSame(302, $response->getStatusCode());
+        $this->assertSame('https://www.example.com', $response->getTargetUrl());
     }
 
     public function testRoutedRedirectResponse()
@@ -67,20 +69,19 @@ class ResponseFactoryTest extends TestCase
         $responseFactory = new ResponseFactory($this->twig, new ResponseFactoryTestUrlGenerator(), 3600);
         $response = $responseFactory->createRoutedRedirectResponse('route1', ['param1' => 'value1']);
 
-        $this->assertEquals(302, $response->getStatusCode());
-        $this->assertEquals('/route1-{"param1":"value1"}', $response->getTargetUrl());
+        $this->assertSame(302, $response->getStatusCode());
+        $this->assertSame('/route1-{"param1":"value1"}', $response->getTargetUrl());
     }
 }
-
 
 class ResponseFactoryTestUrlGenerator implements UrlGeneratorInterface
 {
     /**
      * {@inheritdoc}
      */
-    public function generate($name, $parameters = array(), $referenceType = self::ABSOLUTE_PATH)
+    public function generate($name, $parameters = [], $referenceType = self::ABSOLUTE_PATH)
     {
-        return '/'.$name.'-'.json_encode($parameters);
+        return '/'.$name.'-'.\json_encode($parameters);
     }
 
     /**

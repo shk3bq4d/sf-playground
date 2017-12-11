@@ -3,77 +3,109 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Form\SettingsType;
-use App\Service\Breadcrumb;
+use App\Form\Type\SettingsType;
 use App\Service\Contentful;
-use App\Service\ResponseFactory;
 use App\Service\State;
 use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
  * SettingsController.
  */
-class SettingsController
+class SettingsController extends AppController
 {
     /**
      * @param Request              $request
-     * @param ResponseFactory      $responseFactory
-     * @param Breadcrumb           $breadcrumb
-     * @param State                $state
-     * @param Contentful           $contentful
      * @param FormFactoryInterface $formFactory
      *
      * @return Response
      */
-    public function __invoke(
-        Request $request,
-        ResponseFactory $responseFactory,
-        Breadcrumb $breadcrumb,
-        State $state,
-        Contentful $contentful,
-        FormFactoryInterface $formFactory
-    ): Response {
-        $form = $formFactory->create(SettingsType::class, $state->getSettings());
+    public function __invoke(Request $request, FormFactoryInterface $formFactory): Response
+    {
+        $form = $formFactory->create(SettingsType::class, $this->state->getSettings());
 
-        $form->handleRequest($request);
+        $redirectUrl = $this->handleSubmit($form, $request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->updateSettings($responseFactory, $request->getSession(), $form->getData());
+            $this->updateSettingsCookie($form->getData());
 
-            return $responseFactory->createRoutedRedirectResponse('settings');
+            if ($redirectUrl) {
+                return $this->responseFactory->createRedirectResponse($redirectUrl);
+            }
+
+            // Let's add the flash success message only
+            // if we're not redirecting the user.
+            $request->getSession()
+                ->getFlashBag()
+                ->add('success', 'changesSavedLabel')
+            ;
+
+            return $this->responseFactory->createRoutedRedirectResponse('settings');
         }
 
-        $breadcrumb->add('homeLabel', 'landing_page')
-            ->add('settingsLabel', 'settings');
+        $this->breadcrumb->add('homeLabel', 'landing_page')
+            ->add('settingsLabel', 'settings')
+        ;
 
-        return $responseFactory->createResponse('settings.html.twig', [
+        return $this->responseFactory->createResponse('settings.html.twig', [
             'form' => $form->createView(),
-            'space' => $contentful->findSpace(),
+            'space' => $this->contentful->findSpace(),
         ]);
     }
 
-    private function updateSettings(ResponseFactory $responseFactory, SessionInterface $session, array $settings): void
+    /**
+     * Submits the form taking care to use either actual form data,
+     * or data stored in session by the DeepLinkSubscriber.
+     *
+     * @param FormInterface $form
+     * @param Request       $request
+     *
+     * @return string|null
+     */
+    private function handleSubmit(FormInterface $form, Request $request): ?string
     {
-        $responseFactory->addCookie(
+        $settings = $request->getSession()->get(State::SESSION_SETTINGS_NAME);
+        if (!$settings) {
+            $form->handleRequest($request);
+
+            return \null;
+        }
+
+        $request->getSession()->remove(State::SESSION_SETTINGS_NAME);
+
+        // Assign default values in case of partial settings being passed,
+        // for instance when only setting credentials or the editorial features flag.
+        $settings = \array_merge($this->state->getSettings(), $settings);
+
+        $url = $settings['redirect'];
+        unset($settings['redirect']);
+        $form->submit($settings);
+
+        return $url;
+    }
+
+    /**
+     * @param string[] $settings
+     */
+    private function updateSettingsCookie(array $settings): void
+    {
+        $this->responseFactory->addCookie(
             Contentful::COOKIE_SETTINGS_NAME,
             [
                 'spaceId' => $settings['spaceId'],
                 'deliveryToken' => $settings['deliveryToken'],
                 'previewToken' => $settings['previewToken'],
-                'editorialFeatures' => (bool) ($settings['editorialFeatures'] ?? false),
+                'editorialFeatures' => (bool) ($settings['editorialFeatures'] ?? \false),
             ]
         );
-
-        $session->getFlashBag()
-            ->add('success', 'changesSavedLabel');
     }
 }

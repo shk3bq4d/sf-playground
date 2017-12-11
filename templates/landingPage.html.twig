@@ -1,19 +1,19 @@
 {#
  * Template: landingPage.html.twig
  *
- * @param Contentful\Delivery\DynamicEntry landingPage
+ * @param Contentful\Delivery\Resource\Entry landingPage
  #}
 
 {% extends 'base.html.twig' %}
 
-{% set title = landingPage.getTitle() %}
+{% set title = landingPage.title %}
 
 {% block page_title %}
     {{ title }}
 {% endblock %}
 
 {% block body %}
-    {% if landingPage.getSlug() != 'home' %}
+    {% if landingPage.slug != 'home' %}
         <div class="layout-centered">
             {% include 'partials/breadcrumb.html.twig' with {} only %}
         </div>
@@ -24,18 +24,21 @@
     </div>
 
     <div class="modules-container">
-        {% for module in landingPage.getContentModules() %}
-            {% if module.getContentType().getId() == 'layoutCopy' %}
+        {% for module in landingPage.contentModules %}
+            {% set contentTypeId = module.contentType.id %}
+            {% if contentTypeId == 'layoutCopy' %}
                 {% include 'partials/moduleCopy.html.twig' with {module: module} only %}
             {% endif %}
 
-            {% if module.getContentType().getId() == 'layoutHeroImage' %}
+            {% if contentTypeId == 'layoutHeroImage' %}
                 {% include 'partials/moduleHeroImage.html.twig' with {module: module} only %}
             {% endif %}
 
-            {% if module.getContentType().getId() == 'layoutHighlightedCourse' %}
-                {% include 'partials/moduleHighlightedCourse.html.twig' with {module: module, course: module.getCourse()} only %}
+            {% if contentTypeId == 'layoutHighlightedCourse' %}
+                {% include 'partials/moduleHighlightedCourse.html.twig' with {module: module} only %}
             {% endif %}
+        {% else %}
+            {% include 'partials/emptyModule.html.twig' with {} only %}
         {% endfor %}
     </div>
 {% endblock %}

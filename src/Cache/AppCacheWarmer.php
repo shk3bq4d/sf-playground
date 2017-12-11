@@ -1,36 +1,52 @@
 <?php
 
+/**
+ * This file is part of the contentful/the-example-app package.
+ *
+ * @copyright 2015-2018 Contentful GmbH
+ * @license   MIT
+ */
+
+declare(strict_types=1);
+
 namespace App\Cache;
 
+use App\Service\ClientFactory;
+use App\Service\Contentful;
 use Contentful\Delivery\Cache\CacheWarmer;
-use Contentful\Delivery\Client;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
 
 class AppCacheWarmer implements CacheWarmerInterface
 {
     /**
-     * @var Client
+     * @var CacheWarmer
      */
-    private $client;
+    private $cacheWarmer;
 
     /**
-     * @param string $spaceId
-     * @param string $deliveryToken
+     * @param ClientFactory          $clientFactory
+     * @param CacheItemPoolInterface $cacheItemPool
      */
-    public function __construct(string $spaceId, string $deliveryToken)
+    public function __construct(ClientFactory $clientFactory, CacheItemPoolInterface $cacheItemPool)
     {
-        $this->client = new Client($deliveryToken, $spaceId);
+        $client = $clientFactory->createClient(Contentful::API_DELIVERY, \null, \null, \false);
+        $this->cacheWarmer = new CacheWarmer($client, $client->getResourcePool(), $cacheItemPool);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function warmUp($cacheDir)
     {
-        $warmer = new CacheWarmer($this->client);
-
-        $warmer->warmUp($cacheDir.'/contentful');
+        $this->cacheWarmer->warmUp();
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function isOptional()
     {
-        return true;
+        return \true;
     }
 }

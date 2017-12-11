@@ -3,9 +3,10 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\EventSubscriber;
@@ -48,7 +49,7 @@ class HttpsSubscriber implements EventSubscriberInterface
     public function onKernelRequest(GetResponseEvent $event): void
     {
         $request = $event->getRequest();
-        if ($request->getScheme() == 'https') {
+        if ('https' === $request->getScheme() || '127.0.0.1' === $request->server->get('REMOTE_ADDR')) {
             return;
         }
 

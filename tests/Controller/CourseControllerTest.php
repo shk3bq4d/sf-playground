@@ -3,29 +3,28 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Tests\Controller;
-
-use Symfony\Component\HttpFoundation\RedirectResponse;
 
 class CourseControllerTest extends AppWebTestCase
 {
     public function testCoursePage()
     {
-        $this->visit('GET', '/courses/hello-world');
+        $this->visit('GET', '/courses/hello-contentful');
 
         $this->assertBreadcrumb([
             ['Home', '/'],
             ['Courses', '/courses'],
-            ['Hello world', '/courses/hello-world'],
+            ['Hello Contentful', '/courses/hello-contentful'],
         ]);
 
         $this->assertPageContains('.layout-sidebar__sidebar-title', 'Table of contents');
-        $this->assertPageContains('.course__title', 'Hello world');
+        $this->assertPageContains('.course__title', 'Hello Contentful');
         $this->assertPageContains('.course__overview-cta', 'Start course');
         $this->assertPageContains('.table-of-contents__link.active', 'Course overview');
     }
@@ -37,82 +36,31 @@ class CourseControllerTest extends AppWebTestCase
 
     public function testCoursePageEditorialFeatures()
     {
-        $this->visit('GET', '/courses/hello-world?enable_editorial_features');
+        $this->visit('GET', '/courses/hello-contentful?editorial_features=enabled', 302);
 
-        $this->assertPageContainsAttr('.header__logo-link', 'href', '/?enable_editorial_features');
-        $this->assertPageContainsAttr('.course__overview-cta', 'href', '/courses/hello-world/lessons/architecture?enable_editorial_features');
-        $this->assertPageContains('.course .editorial-features__item a', 'Edit in the web app');
+        // Two redirects are used:
+        // one to the settings page, and one back to the previous URL.
+        $this->followRedirect();
+        $this->followRedirect();
+
+        $this->assertPageContains('.course .editorial-features__item a', 'Edit in the Contentful web app');
     }
 
     public function testCoursePageGerman()
     {
-        $this->visit('GET', '/courses/hello-world?locale=de-DE');
+        $this->visit('GET', '/courses/hello-contentful?locale=de-DE');
 
         $this->assertPageContainsAttr('.header__logo-link', 'href', '/?locale=de-DE');
         $this->assertPageContains('.layout-sidebar__sidebar-title', 'Inhalt');
-        $this->assertPageContains('.course__title', 'Hallo Welt');
+        $this->assertPageContains('.course__title', 'Hallo Contentful');
         $this->assertPageContains('.course__overview-cta', 'Kurs beginnen');
         $this->assertPageContains('.table-of-contents__link.active', 'Kurs Übersicht');
     }
 
-    public function testLessonsPage()
+    public function testCourseNotFound()
     {
-        $this->visit('GET', '/courses/hello-world/lessons', 301);
+        $this->visit('GET', '/courses/not-found', 404);
 
-        $this->assertInstanceOf(RedirectResponse::class, $this->response);
-        $this->assertEquals('http://localhost/courses/hello-world', $this->response->getTargetUrl());
-    }
-
-    public function testLessonPage()
-    {
-        $requestTime = \time();
-        $this->visit('GET', '/courses/hello-world/lessons/architecture');
-
-        $this->assertBreadcrumb([
-            ['Home', '/'],
-            ['Courses', '/courses'],
-            ['Hello world', '/courses/hello-world'],
-            ['Lessons', '/courses/hello-world'],
-            ['Architecture', '/courses/hello-world/lessons/architecture'],
-        ]);
-
-        $this->assertPageContains('.lesson__title', 'Architecture');
-        $this->assertPageContains('.table-of-contents__link.active', 'Architecture');
-        $this->assertPageContains('.lesson__cta', 'Go to the next lesson');
-
-        $visitedLessonsCookie = $this->response->headers->getCookies()[0];
-        $this->assertEquals('visitedLessons', $visitedLessonsCookie->getName());
-        $this->assertCount(1, json_decode($visitedLessonsCookie->getValue()));
-        $this->assertBetween($requestTime + 172800, $visitedLessonsCookie->getExpiresTime(), \time() + 172800);
-    }
-
-    public function testLesson404Page()
-    {
-        $this->visit('GET', '/courses/hello-world/lessons/wrong-lesson', 404);
-    }
-
-    public function testLessonPageEditorialFeatures()
-    {
-        $this->visit('GET', '/courses/hello-world/lessons/architecture?enable_editorial_features');
-
-        $this->assertPageContainsAttr('.header__logo-link', 'href', '/?enable_editorial_features');
-        $this->assertPageContains('.lesson .editorial-features__item a', 'Edit in the web app');
-    }
-
-    public function testLessonPageGerman()
-    {
-        $requestTime = \time();
-        $this->visit('GET', '/courses/hello-world/lessons/architecture?locale=de-DE');
-
-        $this->assertPageContainsAttr('.header__logo-link', 'href', '/?locale=de-DE');
-        $this->assertPageContains('.lesson__title', 'Architektur');
-        $this->assertPageContains('.table-of-contents__link.active', 'Architektur');
-        $this->assertPageContains('.lesson__cta', 'Nächste Lektion ansehen');
-        $this->assertPageContainsAttr('.lesson__cta', 'href', '/courses/hello-world/lessons/content-model?locale=de-DE');
-
-        $visitedLessonsCookie = $this->response->headers->getCookies()[0];
-        $this->assertEquals('visitedLessons', $visitedLessonsCookie->getName());
-        $this->assertCount(1, json_decode($visitedLessonsCookie->getValue()));
-        $this->assertBetween($requestTime + 172800, $visitedLessonsCookie->getExpiresTime(), \time() + 172800);
+        $this->assertPageContains('body', 'The course you are trying to open does not exist.');
     }
 }

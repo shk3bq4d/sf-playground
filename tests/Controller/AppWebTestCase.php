@@ -1,12 +1,21 @@
 <?php
 
+/**
+ * This file is part of the contentful/the-example-app package.
+ *
+ * @copyright 2015-2018 Contentful GmbH
+ * @license   MIT
+ */
+
+declare(strict_types=1);
+
 namespace App\Tests\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Client;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 
 abstract class AppWebTestCase extends WebTestCase
 {
@@ -26,25 +35,34 @@ abstract class AppWebTestCase extends WebTestCase
     protected $response;
 
     /**
+     * @var Request
+     */
+    protected $request;
+
+    public function setUp()
+    {
+        $this->client = static::createClient();
+    }
+
+    /**
      * @param string $method
      * @param string $url
      * @param int    $statusCode
      */
     protected function visit(string $method, string $url, int $statusCode = 200)
     {
-        $this->client = static::createClient();
-
         $this->crawler = $this->client->request($method, $url);
+        $this->request = $this->client->getRequest();
         $this->response = $this->client->getResponse();
 
-        $this->assertEquals($statusCode, $this->response->getStatusCode());
+        $this->assertSame($statusCode, $this->response->getStatusCode());
     }
 
     /**
      * @param string      $selector
      * @param string|null $value
      */
-    protected function assertPageContains(string $selector, string $value = null)
+    protected function assertPageContains(string $selector, string $value = \null)
     {
         $selector .= $value ? ':contains("'.$value.'")' : '';
 
@@ -58,7 +76,7 @@ abstract class AppWebTestCase extends WebTestCase
      */
     protected function assertPageContainsAttr(string $selector, string $attr, string $expected)
     {
-        return $this->assertEquals($expected, $this->crawler->filter($selector)->attr($attr));
+        return $this->assertSame($expected, $this->crawler->filter($selector)->attr($attr));
     }
 
     /**
@@ -69,8 +87,8 @@ abstract class AppWebTestCase extends WebTestCase
         $this->crawler->filter('.breadcrumb a')->each(function (Crawler $item, int $index) use ($breadcrumb) {
             $currentBreadcrumb = $breadcrumb[$index];
 
-            $this->assertEquals($item->text(), $currentBreadcrumb[0]);
-            $this->assertEquals($item->attr('href'), $currentBreadcrumb[1]);
+            $this->assertSame($item->text(), $currentBreadcrumb[0]);
+            $this->assertSame($item->attr('href'), $currentBreadcrumb[1]);
         });
     }
 
@@ -80,7 +98,7 @@ abstract class AppWebTestCase extends WebTestCase
      * @param int  $max
      * @param bool $includeBoundaries
      */
-    protected function assertBetween(int $min, int $value, int $max, bool $includeBoundaries = true)
+    protected function assertBetween(int $min, int $value, int $max, bool $includeBoundaries = \true)
     {
         $constraint = $includeBoundaries
             ? $this->logicalAnd(
@@ -96,5 +114,15 @@ abstract class AppWebTestCase extends WebTestCase
             $value,
             $constraint
         );
+    }
+
+    /**
+     * Shortcut function for children classes.
+     */
+    protected function followRedirect(): void
+    {
+        $this->crawler = $this->client->followRedirect();
+        $this->request = $this->client->getRequest();
+        $this->response = $this->client->getResponse();
     }
 }

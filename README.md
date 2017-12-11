@@ -1,5 +1,7 @@
 ## The PHP example app
 
+[![CircleCI](https://img.shields.io/circleci/project/github/contentful/the-example-app.php.svg)](https://circleci.com/gh/contentful/the-example-app.php)
+
 The PHP example app teaches the very basics of how to work with Contentful:
 
 - consume content from the Contentful Delivery and Preview APIs
@@ -8,7 +10,7 @@ The PHP example app teaches the very basics of how to work with Contentful:
 
 The app demonstrates how decoupling content from its presentation enables greater flexibility and facilitates shipping higher quality software more quickly.
 
-<a href="https://the-example-app-php.herokuapp.com/" target="_blank"><img src="https://images.contentful.com/qz0n5cdakyl9/4GZmvrdodGM6CksMCkkAEq/700a527b8203d4d3ccd3c303c5b3e2aa/the-example-app.png" alt="Screenshot of the example app"/></a>
+<a href="https://the-example-app-php.herokuapp.com/" target="_blank"><img src="https://images.contentful.com/88dyiqcr7go8/2VvMC41pxmCmwEyyAWCCmQ/3d1288376fb1846544572e2eb0b2a5b5/the-example-app-php.herokuapp.com.png" alt="Screenshot of the example app"/></a>
 
 You can see a hosted version of `The PHP example app` on <a href="https://the-example-app-php.herokuapp.com/" target="_blank">Heroku</a>.
 
@@ -85,7 +87,38 @@ php bin/console server:run
 ```
 Final Step:
 
-Open [http://localhost:8000?enable_editorial_features](http://localhost:8000?enable_editorial_features) and take a look around. This URL flag adds an “Edit” button in the app on every editable piece of content which will take you back to Contentful web app where you can make changes. It also adds “Draft” and “Pending Changes” status indicators to all content if relevant.
+Open [http://localhost:8000/?editorial_features=enabled](http://localhost:8000/?editorial_features=enabled) and take a look around. This URL flag adds an “Edit” button in the app on every editable piece of content which will take you back to Contentful web app where you can make changes. It also adds “Draft” and “Pending Changes” status indicators to all content if relevant.
+
+
+## Use Docker
+You can also run this app as a Docker container:
+
+Step 1: Clone the repo
+
+```bash
+git clone https://github.com/contentful/the-example-app.php.git
+```
+
+Step 2: Build the Docker images
+
+```bash
+docker-compose build
+```
+
+Step 3: Run the Docker containers locally:
+
+```bash
+docker-compose up
+```
+
+If you created your own Contentful space, you can use it by overriding the following environment variables in the `docker-compose` file:
+
+```bash
+environment:
+ - CONTENTFUL_SPACE_ID=<SPACE_ID>
+ - CONTENTFUL_DELIVERY_TOKEN=<DELIVERY_ACCESS_TOKEN>
+ - CONTENTFUL_PREVIEW_TOKEN=<PREVIEW_ACCESS_TOKEN>
+```
 
 ## Deploy to Heroku
 

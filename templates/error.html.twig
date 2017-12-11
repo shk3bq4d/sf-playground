@@ -1,45 +1,45 @@
+{#
+ * Template: error.html.twig
+ *
+ * @param \Exception exception
+ #}
+
+
 {% extends 'base.html.twig' %}
 
-{% block page_title %}
-    {{ 'somethingWentWrongLabel'|trans }}
-{% endblock %}
+{% block page_title %}Error{% endblock %}
 
 {% block body %}
     <div class="layout-centered">
         <div class="error">
             <h1>{{ 'somethingWentWrongLabel'|trans }} ({{ exception.statusCode }})</h1>
-            <h2>{{ 'tryLabel'|trans }}:</h2>
 
+            {% if exception.message %}
+                <p>{{ exception.message }}</p>
+            {% endif %}
+
+            <h2>{{ 'hintsLabel'|trans }}</h2>
             <ul>
-                {% if message is defined %}
-                    <li>{{ message|trans }}</li>
+                {% if exception.statusCode == 404 %}
+                    <li>{{ 'notFoundErrorHint'|trans }}</li>
+                    <li>{{ 'draftOrPublishedErrorHint'|trans }}</li>
+                {% elseif exception.statusCode == 400 %}
+                    <li>{{ 'contentModelChangedErrorHint'|trans }}</li>
+                {% elseif exception.statusCode == 401 %}
+                    <li>{{ 'verifyCredentialsErrorHint'|trans }}</li>
                 {% else %}
-                    {% if exception.statusCode == 404 %}
-                        <li>{{ 'error404Route'|trans }}</li>
-                        <li>{{ 'draftOrPublishedErrorLabel'|trans }}</li>
-                    {% endif %}
-                    {% if exception.statusCode == 400 %}
-                        <li>{{ 'contentModelChangedErrorLabel'|trans }}</li>
-                    {% endif %}
-                    {% if exception.statusCode == 401 %}
-                        <li>{{ 'verifyCredentialsErrorLabel'|trans }}</li>
-                        <li>{{ 'localeContentErrorLabel'|trans }}</li>
-                    {% endif %}
-                {% endif %}
-                {% if exception is defined %}
-                    <li>{{ 'stackTraceErrorLabel'|trans }}</li>
+                    <li>{{ 'contentModelChangedErrorHint'|trans }}</li>
+                    <li>{{ 'draftOrPublishedErrorHint'|trans }}</li>
+                    <li>{{ 'localeContentErrorHint'|trans }}</li>
                 {% endif %}
             </ul>
 
-            {% if exception is defined %}
-                <h2>{{ 'stackTraceLabel'|trans }}</h2>
-                <pre class="error__stack-trace">
-                    <code class="shell">
-                        {%- for index, trace in exception.trace -%}
-                        {{ '#' ~ index ~ ' ' ~ trace.file ~ '(' ~ trace.line ~ ') ' ~ trace.short_class ~ '::' ~ trace.function ~ '(...)' ~ "\n" }}
-                        {%- endfor -%}
-                    </code>
-                </pre>
+            {% if state.usesCookieCredentials %}
+                <form method="post" action="{{ path('reset') }}">
+                    <p>
+                        <button type="submit">{{ 'resetCredentialsLabel'|trans }}</button>
+                    </p>
+                </form>
             {% endif %}
         </div>
     </div>

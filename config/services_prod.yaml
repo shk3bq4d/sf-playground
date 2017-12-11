@@ -24,21 +24,18 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
-    App\Cache\AppCacheWarmer:
+    App\EventSubscriber\LocaleSubscriber:
         arguments:
-            $spaceId: "%env(CONTENTFUL_SPACE_ID)%"
-            $deliveryToken: "%env(CONTENTFUL_DELIVERY_TOKEN)%"
-    App\Service\Contentful:
+            $availableLocales: "%available_locales%"
+    App\Service\ClientFactory:
         arguments:
-            $cacheDir: "%kernel.cache_dir%"
+            $deliveryApiUrl: "%env(CONTENTFUL_DELIVERY_URL)%"
+            $previewApiUrl: "%env(CONTENTFUL_PREVIEW_URL)%"
     App\Service\ResponseFactory:
         arguments:
             $cookieLifetime: "%cookie_lifetime%"
     App\Service\State:
         arguments:
             $request: "@=service('request_stack').getCurrentRequest()"
-            $spaceId: "%env(CONTENTFUL_SPACE_ID)%"
-            $deliveryToken: "%env(CONTENTFUL_DELIVERY_TOKEN)%"
-            $previewToken: "%env(CONTENTFUL_PREVIEW_TOKEN)%"
+            $credentials: "%default_credentials%"
             $locale: '%kernel.default_locale%'
-            $availableLocales: '%available_locales%'

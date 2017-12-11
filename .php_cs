@@ -1,19 +1,9 @@
 <?php
 
-use PhpCsFixer\Config;
-use PhpCsFixer\Finder;
+$config = require __DIR__.'/vendor/contentful/core/scripts/php-cs-fixer.php';
 
-$finder = Finder::create()
-    ->in('src');
-
-return Config::create()
-    ->setFinder($finder)
-    ->setRules([
-      '@Symfony' => true,
-      'array_syntax' => ['syntax' => 'short'],
-      'blank_line_before_return' => true,
-      'ordered_imports' => true,
-      'phpdoc_add_missing_param_annotation' => true,
-      'phpdoc_order' => true,
-    ])
-    ->setUsingCache(true);
+return $config(
+    'the-example-app',
+    true,
+    ['config', 'src', 'public', 'tests']
+);

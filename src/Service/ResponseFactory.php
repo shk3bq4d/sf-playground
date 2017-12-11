@@ -3,15 +3,17 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Service;
 
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Twig\Environment;
@@ -46,6 +48,11 @@ class ResponseFactory
     private $cookies = [];
 
     /**
+     * @var bool
+     */
+    private $clearSettingsCookie = \false;
+
+    /**
      * @param Environment           $twig
      * @param UrlGeneratorInterface $urlGenerator
      * @param int                   $cookieLifetime
@@ -68,6 +75,14 @@ class ResponseFactory
             \json_encode($value),
             \time() + $this->cookieLifetime
         );
+    }
+
+    /**
+     * Removes the settings cookie.
+     */
+    public function clearSettingsCookie(): void
+    {
+        $this->clearSettingsCookie = \true;
     }
 
     /**
@@ -108,7 +123,7 @@ class ResponseFactory
     }
 
     /**
-     * Applies stores cookies to the current Response object.
+     * Applies stored cookies to the current Response object.
      *
      * @param Response $response
      *
@@ -120,6 +135,27 @@ class ResponseFactory
             $response->headers->setCookie($cookie);
         }
 
+        if ($this->clearSettingsCookie) {
+            $response->headers->clearCookie(Contentful::COOKIE_SETTINGS_NAME);
+        }
+
         return $response;
+    }
+
+    /**
+     * @param Request $request
+     * @param string  $entryId
+     *
+     * @return array
+     */
+    public function updateVisitedLessonCookie(Request $request, string $entryId): array
+    {
+        $cookie = $request->cookies->get('visitedLessons');
+        $visitedLessons = $cookie ? \json_decode($cookie, \true) : [];
+        $visitedLessons[] = $entryId;
+
+        $this->addCookie('visitedLessons', \array_unique($visitedLessons));
+
+        return $visitedLessons;
     }
 }

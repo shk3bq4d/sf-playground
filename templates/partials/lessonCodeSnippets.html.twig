@@ -1,117 +1,117 @@
 {#
  * Template: partials/lessonCodeSnippets.html.twig
  *
- * @param Contentful\Delivery\DynamicEntry module
+ * @param Contentful\Delivery\Resource\Entry module
  #}
 
 <div class="lesson-module lesson-module-code">
     <div class="lesson-module-code__header">
-        {% if module.getCurl() %}
-            <a href="#" class="lesson-module-code__trigger" data-target="{{ module.getId() }}-curl">cURL</a>
+        {% if module.curl %}
+            <a href="#" class="lesson-module-code__trigger" data-target="curl">cURL</a>
         {% endif %}
 
-        {% if module.getDotNet() %}
-            <a href="#" class="lesson-module-code__trigger" data-target="{{ module.getId() }}-dotnet">.NET</a>
+        {% if module.dotNet %}
+            <a href="#" class="lesson-module-code__trigger" data-target="dotnet">.NET</a>
         {% endif %}
 
-        {% if module.getJavascript() %}
-            <a href="#" class="lesson-module-code__trigger" data-target="{{ module.getId() }}-javascript">JavaScript</a>
+        {% if module.javascript %}
+            <a href="#" class="lesson-module-code__trigger" data-target="javascript">JavaScript</a>
         {% endif %}
 
-        {% if module.getJava() %}
-            <a href="#" class="lesson-module-code__trigger" data-target="{{ module.getId() }}-java">Java</a>
+        {% if module.java %}
+            <a href="#" class="lesson-module-code__trigger" data-target="java">Java</a>
         {% endif %}
 
-        {% if module.getJavaAndroid() %}
-            <a href="#" class="lesson-module-code__trigger" data-target="{{ module.getId() }}-android">Android</a>
+        {% if module.javaAndroid %}
+            <a href="#" class="lesson-module-code__trigger" data-target="android">Android</a>
         {% endif %}
 
-        {% if module.getPhp() %}
-            <a href="#" class="lesson-module-code__trigger lesson-module-code__trigger--active" data-target="{{ module.getId() }}-php">PHP</a>
+        {% if module.php %}
+            <a href="#" class="lesson-module-code__trigger lesson-module-code__trigger--active" data-target="php">PHP</a>
         {% endif %}
 
-        {% if module.getPython() %}
-            <a href="#" class="lesson-module-code__trigger" data-target="{{ module.getId() }}-python">Python</a>
+        {% if module.python %}
+            <a href="#" class="lesson-module-code__trigger" data-target="python">Python</a>
         {% endif %}
 
-        {% if module.getRuby() %}
-            <a href="#" class="lesson-module-code__trigger" data-target="{{ module.getId() }}-ruby">Ruby</a>
+        {% if module.ruby %}
+            <a href="#" class="lesson-module-code__trigger" data-target="ruby">Ruby</a>
         {% endif %}
 
-        {% if module.getSwift() %}
-            <a href="#" class="lesson-module-code__trigger" data-target="{{ module.getId() }}-swift">Swift</a>
+        {% if module.swift %}
+            <a href="#" class="lesson-module-code__trigger" data-target="swift">Swift</a>
         {% endif %}
     </div>
 
     <div class="lesson-module-code__code-area">
-        {% if module.getCurl() %}
-            <div class="lesson-module-code__code" id="{{ module.getId() }}-curl">
+        {% if module.curl %}
+            <div class="lesson-module-code__code" id="curl">
                 <pre>
-                    <code class="shell">{{ module.getCurl() }}</code>
+                    <code class="shell">{{ module.curl }}</code>
                 </pre>
             </div>
         {% endif %}
 
-        {% if module.getDotNet() %}
-            <div class="lesson-module-code__code" id="{{ module.getId() }}-dotnet">
+        {% if module.dotNet %}
+            <div class="lesson-module-code__code" id="dotnet">
                 <pre>
-                    <code class="csharp">{{ module.getDotNet() }}</code>
+                    <code class="csharp">{{ module.dotNet }}</code>
                 </pre>
             </div>
         {% endif %}
 
-        {% if module.getJavascript() %}
-            <div class="lesson-module-code__code" id="{{ module.getId() }}-javascript">
+        {% if module.javascript %}
+            <div class="lesson-module-code__code" id="javascript">
                 <pre>
-                    <code class="javascript">{{ module.getJavascript() }}</code>
+                    <code class="javascript">{{ module.javascript }}</code>
                 </pre>
             </div>
         {% endif %}
 
-        {% if module.getJava() %}
-            <div class="lesson-module-code__code" id="{{ module.getId() }}-java">
+        {% if module.java %}
+            <div class="lesson-module-code__code" id="java">
                 <pre>
-                    <code class="java">{{ module.getJava() }}</code>
+                    <code class="java">{{ module.java }}</code>
                 </pre>
             </div>
         {% endif %}
 
-        {% if module.getJavaAndroid() %}
-            <div class="lesson-module-code__code" id="{{ module.getId() }}-android">
+        {% if module.javaAndroid %}
+            <div class="lesson-module-code__code" id="android">
                 <pre>
-                    <code class="java">{{ module.getJavaAndroid() }}</code>
+                    <code class="java">{{ module.javaAndroid }}</code>
                 </pre>
             </div>
         {% endif %}
 
-        {% if module.getPhp() %}
-            <div class="lesson-module-code__code lesson-module-code__code--active" id="{{ module.getId() }}-php">
+        {% if module.php %}
+            <div class="lesson-module-code__code lesson-module-code__code--active" id="php">
                 <pre>
-                    <code class="php">{{ module.getPhp() }}</code>
+                    <code class="php">{{ module.php }}</code>
                 </pre>
             </div>
         {% endif %}
 
-        {% if module.getPython() %}
-            <div class="lesson-module-code__code" id="{{ module.getId() }}-python">
+        {% if module.python %}
+            <div class="lesson-module-code__code" id="python">
                 <pre>
-                    <code class="python">{{ module.getPython() }}</code>
+                    <code class="python">{{ module.python }}</code>
                 </pre>
             </div>
         {% endif %}
 
-        {% if module.getRuby() %}
-            <div class="lesson-module-code__code" id="{{ module.getId() }}-ruby">
+        {% if module.ruby %}
+            <div class="lesson-module-code__code" id="ruby">
                 <pre>
-                    <code class="ruby">{{ module.getRuby() }}</code>
+                    <code class="ruby">{{ module.ruby }}</code>
                 </pre>
             </div>
         {% endif %}
 
-        {% if module.getSwift() %}
-            <div class="lesson-module-code__code" id="{{ module.getId() }}-swift">
+        {% if module.swift %}
+            <div class="lesson-module-code__code" id="swift">
                 <pre>
-                    <code class="swift">{{ module.getSwift() }}</code>
+                    <code class="swift">{{ module.swift }}</code>
                 </pre>
             </div>
         {% endif %}

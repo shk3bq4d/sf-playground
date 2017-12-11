@@ -3,17 +3,19 @@
 /**
  * This file is part of the contentful/the-example-app package.
  *
- * @copyright 2017 Contentful GmbH
+ * @copyright 2015-2018 Contentful GmbH
  * @license   MIT
  */
+
 declare(strict_types=1);
 
 namespace App\Validator\Constraints;
 
 use App\Service\Contentful;
-use Contentful\Exception\AccessTokenInvalidException;
-use Contentful\Exception\ApiException;
-use Contentful\Exception\NotFoundException;
+use App\Service\State;
+use Contentful\Core\Api\Exception;
+use Contentful\Core\Exception\AccessTokenInvalidException;
+use Contentful\Core\Exception\NotFoundException;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 
@@ -37,11 +39,18 @@ class ContentfulCredentialsValidator extends ConstraintValidator
     private $contentful;
 
     /**
-     * @param Contentful $contentful
+     * @var State
      */
-    public function __construct(Contentful $contentful)
+    private $state;
+
+    /**
+     * @param Contentful $contentful
+     * @param State      $state
+     */
+    public function __construct(Contentful $contentful, State $state)
     {
         $this->contentful = $contentful;
+        $this->state = $state;
     }
 
     /**
@@ -57,39 +66,59 @@ class ContentfulCredentialsValidator extends ConstraintValidator
             return;
         }
 
-        // Validate space ID and delivery token.
-        // If any error arises, we return early and skip validating the preview token.
-        try {
-            $this->contentful->validateCredentials($values['spaceId'], $values['deliveryToken']);
-        } catch (AccessTokenInvalidException $exception) {
-            return $this->context->buildViolation('deliveryKeyInvalidLabel')
-                ->atPath('[deliveryToken]')
-                ->addViolation();
-        } catch (NotFoundException $exception) {
-            return $this->context->buildViolation('spaceOrTokenInvalid')
-                ->atPath('[spaceId]')
-                ->addViolation();
-        } catch (ApiException $exception) {
-            return $this->context->buildViolation('somethingWentWrongLabel')
-                ->atPath('[deliveryToken]')
-                ->addViolation();
+        if ($this->equalsStateCredentials($values)) {
+            return;
         }
 
-        // Validate space ID and preview token.
+        $this->validateCredentials($values['spaceId'], $values['deliveryToken'], Contentful::API_DELIVERY);
+        $this->validateCredentials($values['spaceId'], $values['previewToken'], Contentful::API_PREVIEW);
+    }
+
+    /**
+     * Small optimization:
+     * let's not check for validity of credentials when they equal
+     * those currently in use, which are guaranteed to be correct.
+     *
+     * @param string[] $values
+     *
+     * @return bool
+     */
+    private function equalsStateCredentials(array $values): bool
+    {
+        return $this->state->getSpaceId() === $values['spaceId']
+            && $this->state->getDeliveryToken() === $values['deliveryToken']
+            && $this->state->getPreviewToken() === $values['previewToken'];
+    }
+
+    /**
+     * @param string $spaceId
+     * @param string $accessToken
+     * @param string $api         Either "delivery" or "preview"
+     */
+    private function validateCredentials(string $spaceId, string $accessToken, string $api): void
+    {
+        $violation = \null;
+        $path = \null;
+        $apiLabel = Contentful::API_DELIVERY === $api ? 'delivery' : 'preview';
+
         try {
-            $this->contentful->validateCredentials($values['spaceId'], $values['previewToken'], false);
+            $this->contentful->validateCredentials($spaceId, $accessToken, $api);
         } catch (AccessTokenInvalidException $exception) {
-            $this->context->buildViolation('deliveryKeyInvalidLabel')
-                ->atPath('[previewToken]')
-                ->addViolation();
+            $violation = $apiLabel.'KeyInvalidLabel';
+            $path = '['.$apiLabel.'Token]';
         } catch (NotFoundException $exception) {
-            $this->context->buildViolation('spaceOrTokenInvalid')
-                ->atPath('[spaceId]')
-                ->addViolation();
-        } catch (ApiException $exception) {
-            $this->context->buildViolation('somethingWentWrongLabel')
-                ->atPath('[previewToken]')
-                ->addViolation();
+            $violation = 'spaceOrTokenInvalid';
+            $path = '[spaceId]';
+        } catch (Exception $exception) {
+            $violation = 'somethingWentWrongLabel';
+            $path = '['.$apiLabel.'Token]';
+        }
+
+        if ($violation) {
+            $this->context->buildViolation($violation)
+                ->atPath($path)
+                ->addViolation()
+            ;
         }
     }
 }
